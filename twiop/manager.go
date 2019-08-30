@@ -57,7 +57,9 @@ func createHTTPClient() *http.Client {
 	consumerSecret := os.Getenv("TWITTER_CONSUMER_SECRET")
 	accessToken := os.Getenv("TWITTER_ACCESS_TOKEN")
 	accessTokenSecret := os.Getenv("TWITTER_ACCESS_TOKEN_SECRET")
-
+	if consumerKey == "" ||consumerSecret == "" ||  accessToken == "" || accessTokenSecret == "" {
+		log.Println("Twitter authentication keys are not properly set as environment variables")
+	}
 	config := oauth1.NewConfig(consumerKey, consumerSecret)
 	token := oauth1.NewToken(accessToken, accessTokenSecret)
 	return config.Client(oauth1.NoContext, token)
