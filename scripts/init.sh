@@ -1,9 +1,7 @@
-# Run this script under twitter-analysis
+# Run this script under project root
 export THISDIR=`pwd`
 echo "Add ${THISDIR} to GOPATH"
-export GOPATH="${GOPATH}:${THISDIR}/go"
+export GOPATH="${GOPATH}:${THISDIR}/"
 
-# Run this only one time
-# go get github.com/dghubble/go-twitter
-# go get github.com/dghubble/oauth1
-go get -u github.com/golang/dep/cmd/dep
+# Go mod requires below as of Aug 2019
+export GO111MODULE=on
