@@ -18,6 +18,8 @@ src/github.com
 
 #IDE
 .idea
+.idea/go-sandbox.iml
+
 .history
 bin/*
 

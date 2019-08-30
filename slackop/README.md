@@ -1,7 +1,8 @@
 # Overview
-slackop is client of interaction with Slack API. 
-The manager enable to keep the context such as URL endpoint into it.
-Also this library can be used without making the manager by giving URL directly to Notify.
+slackop is client to interact with Slack API.
+ 
+The manager can keep the application specific context such as URL endpoint where would like to call.
+Also this library can be used without making the manager by giving URL directly to Notify funciton.
 
 # Getting Started
-Fwllow [Slack API instruction](https://api.slack.com/docs/message-formatting)
+Follow [Slack API instruction](https://api.slack.com/docs/message-formatting)
