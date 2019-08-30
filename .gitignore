@@ -17,7 +17,7 @@ src/golang.org
 src/github.com
 
 #IDE
-.idea/
+.idea
 .history
 bin/*
 
