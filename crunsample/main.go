@@ -35,9 +35,22 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func polling(w http.ResponseWriter, r *http.Request) {
 	log.Print("Polling Tweets.")
-	testSearch()
+
+	extractKeywork("Cloud Google")
 	fmt.Fprintf(w, "Polling done!\n")
 }
+
+func pollKey(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get("key")
+	if key == "" {
+		fmt.Fprintf(w, "parameter was blank!\n")
+		return
+	}
+	log.Print("Polling Tweets having ", key)
+	extractKeywork(key)
+	fmt.Fprintf(w, "Polling done!\n")
+}
+
 
 func stop(w http.ResponseWriter, r *http.Request) {
 	log.Print("Stop Stream.")
@@ -74,13 +87,17 @@ func ping(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Ack "+since.Format(f))
 }
 
-func testSearch() {
+func initSince() {
 	if since == nil {
 		tmp := time.Now()
 		tmp = tmp.Add(-time.Hour)
 		since = &tmp
 	}
-	tweets := mgr.FilterSearch(mgr.SearchKeywordSince("Cloud Google", *since), func(t twitter.Tweet) bool {
+}
+
+func extractKeywork(key string) {
+	initSince()
+	tweets := mgr.FilterSearch(mgr.SearchKeywordSince(key, *since), func(t twitter.Tweet) bool {
 		return len(t.Text) > 0 && t.InReplyToStatusID == 0
 	})
 	for _, t := range tweets {
@@ -95,11 +112,13 @@ func testSearch() {
 	since = &now
 }
 
+
 func main() {
 	log.Print("Hello world sample started.")
 
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/polling", polling)
+	http.HandleFunc("/pollkey", pollKey)
 	http.HandleFunc("/stop", stop)
 	http.HandleFunc("/createsub", createSub)
 	http.HandleFunc("/getpubsub", getPubSub)
