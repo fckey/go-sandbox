@@ -1,0 +1,4 @@
+runtime: go112
+
+env_variables:
+  ID_TOKEN_AUDIENCE: $IAP_CLIENT_ID
