@@ -1,1 +1,7 @@
-package docker_repro
+package main
+
+import "fmt"
+
+func main(){
+	fmt.Println("Docker Go sample")
+}

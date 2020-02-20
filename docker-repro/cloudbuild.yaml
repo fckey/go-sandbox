@@ -7,12 +7,3 @@ steps:
     echo
     echo "Contents:"
     ls -lR .
-
-    echo
-    echo "Contents of subdir1/link_to_subdir2:"
-    ls -lR subdir1/
-
-    echo "Contents of subdir1/link_to_subdir2:"
-    ls -lR subdir1/link_to_subdir2/
-
-    echo

@@ -1,0 +1,25 @@
+version: '2.3'
+services:
+  gcloud-config:
+    # Containter to store credentials created by `gcloud auth`
+    image: busybox
+    volumes:
+    - /root/.config
+  gcloud:
+    image: google/cloud-sdk:273.0.0-alpine
+    volumes_from:
+    - gcloud-config
+    tty: true
+    working_dir: /work
+    volumes:
+    - ./cloudbuild.sh:/work/cloudbuild.sh
+    - ./cloudbuild.yaml:/work/cloudbuild.yaml
+  go_sample:
+    image: go_sample
+    build:
+      context: .
+    volumes_from:
+    - gcloud-config
+    volumes:
+    - .:/work
+    tty: true
