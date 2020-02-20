@@ -23,7 +23,7 @@ Runs Cloud Build from a container.
 
 How to run:
 ```shell script
-docker-compose run --rm gcloud /bin/sh cloudbuild.sh <PROJECT_ID>
+docker-compose run --rm gcloud /bin/sh cloudbuild.sh ${GCP_PROJECT_ID}
 ```
 
 This scenario uses:
@@ -52,3 +52,19 @@ This scenario uses:
 
 - "go_sample" in docker-compose file
 - sample.go - Go file ran in the container
+
+## Create Cloud Composer via terraform
+Required Setup:
+- Create service account which has necessary permission. For this example which create Composer environment follow below
+  1. Create service account like "terraform-dev@" 
+  1. Give "Composer Administrator" and "Editor"
+  1. Download key and save as terra/terraform-key.json
+
+How to Run:
+```shell script
+# Just plan
+docker-compose run --rm create_comp  plan
+
+# Create 
+docker-compose run --rm create_comp  apply
+```

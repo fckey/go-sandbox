@@ -6,20 +6,27 @@ services:
     volumes:
     - /root/.config
   gcloud:
-    image: google/cloud-sdk:273.0.0-alpine
+    image: google/cloud-sdk:280.0.0-alpine
     volumes_from:
     - gcloud-config
     tty: true
     working_dir: /work
     volumes:
-    - ./cloudbuild.sh:/work/cloudbuild.sh
-    - ./cloudbuild.yaml:/work/cloudbuild.yaml
+    - ./cloudbuild/cloudbuild.sh:/work/cloudbuild.sh
+    - ./cloudbuild/cloudbuild.yaml:/work/cloudbuild.yaml
   go_sample:
     image: go_sample
     build:
-      context: .
+      context: ./run-go
     volumes_from:
     - gcloud-config
     volumes:
-    - .:/work
+    - ./run-go:/work
+    tty: true
+  create_comp:
+    build:
+      context: ./terra
+    volumes_from:
+      - gcloud-config
+    working_dir: /work
     tty: true

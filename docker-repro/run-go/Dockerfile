@@ -7,8 +7,8 @@ ENV GO111MODULE=on
 WORKDIR /work
 COPY sample.go /work
 
-RUN ls -l
 RUN CGO_ENABLED=0 GOOS=linux go build sample.go
+RUN ls -l
 
 # Run the web service on container startup.
 ENTRYPOINT ["/work/sample"]
