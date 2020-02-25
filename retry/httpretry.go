@@ -3,7 +3,6 @@ package retry
 import (
 	"context"
 	"net/http"
-	"time"
 )
 
 // RetryableHTTPRequest is http call which expect to be retried.
@@ -16,17 +15,17 @@ type RetriableHTTPResponseChecker interface {
 }
 
 // Is retryable is an adopter of RetriableChecker
-type IsRetryableHTTPResponse func(resp *http.Response, err error) bool
+type IsHTTPRequestRetryable func(resp *http.Response, err error) bool
 
 // IsRetryableError calls r(err)
-func (i IsRetryableHTTPResponse) IsRetryableStatus(resp *http.Response, err error) bool {
+func (i IsHTTPRequestRetryable) IsRetryableStatus(resp *http.Response, err error) bool {
 	return i(resp, err)
 }
 
+func RunWithHTTPRetry(ctx context.Context, config Config,
+	call RetryableHTTPRequest, checker IsHTTPRequestRetryable) (resp *http.Response, err error) {
 
-func RunWithHTTPRetry(ctx context.Context, backoff Backoff,
-	call RetryableHTTPRequest, checker IsRetryableHTTPResponse) (resp *http.Response, err error) {
-	return resp, Retry(ctx, backoff, func() (stop bool, err error) {
+	return resp, Retry(ctx, config, func() (stop bool, err error) {
 		resp, err = call()
 		if err == nil {
 			return true, nil
@@ -35,7 +34,24 @@ func RunWithHTTPRetry(ctx context.Context, backoff Backoff,
 	})
 }
 
-func WithRtriableHTTPResponse(statuses []int, err error) IsRetryableHTTPResponse {
+// DoWithRetry executes http.Client.Do(http.Request) of given http.Client and http.Request as retryable manner
+// If simple Do is required, this function should be used.
+// statuses is expected as list of StatusCode in http
+func DoWithRetry(ctx context.Context, cfg Config,
+	c *http.Client, r *http.Request, statuses ...int) (resp *http.Response, err error) {
+	checker := WithRtriableHTTPResponse(statuses...)
+	return resp, Retry(ctx, cfg, func() (stop bool, err error) {
+		resp, err = c.Do(r)
+		if err == nil && resp.StatusCode < 400 {
+			return true, nil
+		}
+		return !checker(resp, err), err
+	})
+}
+
+// WithRtriableHTTPResponse judges if response is retriable or not
+// Reatriable response can be set by statuses
+func WithRtriableHTTPResponse(statuses ...int) IsHTTPRequestRetryable {
 	retriableStatuses := []int{
 		http.StatusRequestTimeout,
 		http.StatusGatewayTimeout,
@@ -47,8 +63,8 @@ func WithRtriableHTTPResponse(statuses []int, err error) IsRetryableHTTPResponse
 			return false
 		}
 
-		// Never retry client error response code like StatusBadRequest or StatusUnauthorized
-		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		// Never retry StatusUnauthorized
+		if resp.StatusCode == 401 {
 			return false
 		}
 
@@ -58,40 +74,5 @@ func WithRtriableHTTPResponse(statuses []int, err error) IsRetryableHTTPResponse
 			}
 		}
 		return false
-	}
-}
-
-// APICall is a user defined call stub.
-type APICall func(context.Context, CallSettings) (*http.Response, error)
-
-type sleeper func(ctx context.Context, d time.Duration) error
-
-// invoke implements Invoke, taking an additional sleeper argument for testing.
-func invoke(ctx context.Context, call APICall, settings CallSettings, sp sleeper) (resp *http.Response, err error) {
-	var retryer Retryer
-	for {
-		resp, err := call(ctx, settings)
-		if err == nil {
-			return resp, nil
-		}
-		if settings.Retry == nil {
-			return nil, err
-		}
-		// Never retry client error response code like StatusBadRequest or StatusUnauthorized
-		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-			return nil, err
-		}
-		if retryer == nil {
-			if r := settings.Retry(); r != nil {
-				retryer = r
-			} else {
-				return nil, err
-			}
-		}
-		if d, ok := retryer.Retry(err); !ok {
-			return resp, err
-		} else if err = sp(ctx, d); err != nil {
-			return nil, err
-		}
 	}
 }

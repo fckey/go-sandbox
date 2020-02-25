@@ -8,17 +8,13 @@ import (
 	"time"
 )
 
-func ExampleRetry() {
-
-}
-
 func TestRetry(t *testing.T) {
 	ctx := context.Background()
 	// Without a context deadline, retry will run until the function
 	// says not to retry any more.
 	n := 0
 	endRetry := errors.New("end retry")
-	err := retry(ctx, NewBackoff(1*time.Second, 32*time.Second, 2),
+	err := retry(ctx, DefaultBackoff(),
 		func() (bool, error) {
 			n++
 			if n < 5 {
@@ -37,7 +33,7 @@ func TestRetry(t *testing.T) {
 	// If the context has a deadline, sleep will return an error
 	// and end the function.
 	n = 0
-	err = retry(ctx, NewBackoff(1*time.Second, 32*time.Second, 2),
+	err = retry(ctx, DefaultBackoff(),
 		func() (bool, error) { return false, nil },
 		func(context.Context, time.Duration) error {
 			n++
@@ -47,7 +43,7 @@ func TestRetry(t *testing.T) {
 			return context.DeadlineExceeded
 		})
 	if err == nil {
-		t.Error("got nil, want error")
+		t.Errorf("got nil, want error: %v", err)
 	}
 }
 
@@ -73,8 +69,8 @@ func TestRunWithRetry(t *testing.T) {
 		}
 		return false
 	}
-	backoff := NewBackoff(1*time.Second, 32*time.Second, 2)
-	err := RunWithRetry(ctx, backoff, retriableFunc, checkerFunc)
+	//backoff := NewConfig(1*time.Second, 32*time.Second, 2, 10)
+	err := RunWithRetry(ctx, DefaultBackoff(), retriableFunc, checkerFunc)
 	if n != 5 {
 		t.Errorf("n: got %d, want %d", n, 10)
 	}

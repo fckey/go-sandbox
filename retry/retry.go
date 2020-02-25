@@ -6,19 +6,21 @@ import (
 	"time"
 )
 
-// Retry calls the supplied function f repeatedly according to the provided
-// backoff parameters. It returns when one of the following occurs:
-// When f's first return value is true, Retry immediately returns with f's second return value.
+type retryIter func() (stop bool, err error)
+
+// Retry calls the supplied function retryIter repeatedly according to the provided
+// backoff parameters in cfg. It returns when one of the following occurs:
+// When retryIter's first return value is true, Retry immediately returns with retryIter's value in err.
 // When the provided context is done, Retry returns with an error that
-// includes both ctx.Error() and the last error returned by f.
-func Retry(ctx context.Context, bo Backoff, f func() (stop bool, err error)) error {
-	return retry(ctx, bo, f, Sleep)
+// includes both ctx.Error() and the last error returned by retryIter.
+func Retry(ctx context.Context, cfg Config, f retryIter) error {
+	return retry(ctx, cfg, f, sleep)
 }
 
-func retry(ctx context.Context, bo Backoff, f func() (stop bool, err error),
-	sleep func(context.Context, time.Duration) error) error {
+func retry(ctx context.Context, cfg Config, f retryIter, s Sleep) error {
 	var lastErr error
 	for {
+		cfg.count++
 		stop, err := f()
 		if stop {
 			return err
@@ -27,19 +29,28 @@ func retry(ctx context.Context, bo Backoff, f func() (stop bool, err error),
 		if err != nil && err != context.Canceled && err != context.DeadlineExceeded {
 			lastErr = err
 		}
-		p := bo.Pause()
-		if cerr := sleep(ctx, p); cerr != nil {
+		p := cfg.Backoff.Pause()
+		if cerr := s(ctx, p); cerr != nil {
 			if lastErr != nil {
 				return fmt.Errorf("retry failed with %v; last error: %v", cerr, lastErr)
 			}
 			return cerr
 		}
+		if cfg.count >= cfg.MaxRetry {
+			if lastErr != nil {
+				return fmt.Errorf("maximum traial exceeded; last error: %v", lastErr)
+			}
+			return fmt.Errorf("operation was not succeded withnin %d trial", cfg.MaxRetry)
+		}
 	}
 }
 
 // Sleep is similar to time.Sleep, but it can be interrupted by ctx.Done() closing.
-// If interrupted, Sleep returns ctx.Err().
-func Sleep(ctx context.Context, d time.Duration) error {
+// Error is expected to be returned when it's interrupted.
+type Sleep func(context.Context, time.Duration) error
+
+// sleep is implementation of retry.Sleep
+func sleep(ctx context.Context, d time.Duration) error {
 	t := time.NewTimer(d)
 	select {
 	case <-ctx.Done():
@@ -57,6 +68,7 @@ type RetriableChecker interface {
 
 // Is retryable is an adopter of RetriableChecker
 type IsRetryable func(err error) bool
+
 // IsRetryableError calls r(err)
 func (r IsRetryable) IsRetryableError(err error) bool {
 	return r(err)
@@ -66,8 +78,8 @@ func (r IsRetryable) IsRetryableError(err error) bool {
 // the context is done.
 // See the similar function in ../storage/invoke.go. The main difference is the
 // reason for retrying.
-func RunWithRetry(ctx context.Context, backoff Backoff, call func() error, checker IsRetryable) error {
-	return Retry(ctx, backoff, func() (stop bool, err error) {
+func RunWithRetry(ctx context.Context, cfg Config, call func() error, checker IsRetryable) error {
+	return Retry(ctx, cfg, func() (stop bool, err error) {
 		err = call()
 		if err == nil {
 			return true, nil
